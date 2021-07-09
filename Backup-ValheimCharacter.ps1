@@ -1,0 +1,5 @@
+function Backup-ValheimCharacter {
+    <#
+        .SYNOPSIS
+    #>
+}
