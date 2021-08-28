@@ -15,3 +15,13 @@
 * World
 
 # Update-ValheimServer
+
+# Restore-ValheimWorld
+* World
+* Path
+* Destination
+
+# Restore-ValheimCharacter
+* Character
+* Path
+* Destination
