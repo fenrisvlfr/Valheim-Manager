@@ -41,10 +41,10 @@ function Restore-ValheimCharacter {
     }
     process {
         switch ($true) {
-            (($Character.GetType() -eq [System.IO.FileInfo]) -and (Test-Path $Character)) {
+            (($Character.GetType() -eq "System.IO.FileInfo") -and (Test-Path $Character)) {
                 $Path = $Character
             }
-            ($Character.GetType -eq [System.String] -and ($Path.GetType -eq [System.IO.DirectoryInfo])) {
+            ($Character.GetType() -eq "System.String" -and ($Path.GetType() -eq "System.IO.DirectoryInfo")) {
                 $Path = Get-ChildItem $Path | Where-Object -FilterScript {$_.name -like "$Character*"} | Sort-Object -Property BaseName -Descending | Select-Object -First 1
             }
             default {

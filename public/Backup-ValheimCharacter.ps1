@@ -47,6 +47,9 @@ function Backup-ValheimCharacter {
                 }
             }
         }
+        if (-not $Character) {
+            [System.Array]$Character = Get-ChildItem "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\characters\*fch" | Select-Object -ExpandProperty BaseName
+        }
     }
     process {
         if ($PSCmdlet.ShouldProcess($Character,"Validation")) {
