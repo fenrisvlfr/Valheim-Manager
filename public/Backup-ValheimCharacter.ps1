@@ -28,11 +28,12 @@ function Backup-ValheimCharacter {
     [CmdletBinding(SupportsShouldProcess)]
     param (
         [Parameter(position=0,ValueFromPipeline)]
-        [ValidateScript({Test-Path "$env:USERPROFILE\AppdData\LocalLow\IronGate\Valheim\characters\$_.fch"})]
-        [System.String[]]$Character = (Get-ChildItem "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\characters\*.fch").BaseName
+        [System.String[]]$Character = (Get-ChildItem "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\characters\*fch" | Select-Object -ExpandProperty BaseName)
         ,
-        [Parameter(position=1,mandatory)]
+        [Parameter(position=1)]
         [System.IO.DirectoryInfo]$Destination = [System.IO.DirectoryInfo]"$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\Archive\Characters"
+        ,
+        [System.Management.Automation.SwitchParameter]$PassThru
     )
 
     begin {
@@ -48,29 +49,34 @@ function Backup-ValheimCharacter {
             }
         }
         if (-not $Character) {
-            [System.Array]$Character = Get-ChildItem "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\characters\*fch" | Select-Object -ExpandProperty BaseName
+            $Character = Get-ChildItem "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\characters\*fch" | Select-Object -ExpandProperty BaseName
         }
     }
     process {
-        if ($PSCmdlet.ShouldProcess($Character,"Validation")) {
-            if (-not (Test-Path "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\characters\$Character.fch")) {
-                Write-Warning -Message ".fch file missing for $Character"
+        foreach ($c in $Character) {
+            if ($PSCmdlet.ShouldProcess($c,"Validation")) {
+                if (-not (Test-Path "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\characters\$c.fch")) {
+                    Write-Warning -Message ".fch file missing for $c"
+                }
+                if (-not (Test-Path "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\characters\$c.fch.old")) {
+                    Write-Warning -Message ".fch.old file missing for $c"
+                }
             }
-            if (-not (Test-Path "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\characters\$Character.fch.old")) {
-                Write-Warning -Message ".fch.old file missing for $Character"
+            if ($PSCmdlet.ShouldProcess($c,"Archiving")) {
+                try {
+                    [System.IO.FileInfo[]]$Archive += Get-ChildItem "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\characters\$c*" -ErrorAction Stop |
+                    Compress-Archive -DestinationPath "$Destination\$c.$(Get-Date -uFormat %s).zip" -CompressionLevel Optimal -ErrorAction Stop -PassThru
+                }
+                catch {
+                    Write-Error $_
+                }
             }
-        }
-        try {
-            Get-ChildItem "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\characters\$Character*" -ErrorAction Stop |
-            Compress-Archive -DestinationPath "$Destination\$Character.$(Get-Date -uFormat %s).zip" -CompressionLevel Optimal -ErrorAction Stop -PassThru -OutVariable Archive
-        }
-        catch {
-            Write-Error $_
         }
     }
     end {
         if ($Archive -and $PassThru) {
             $Archive
+            Remove-Variable Archive
         }
     }
 }

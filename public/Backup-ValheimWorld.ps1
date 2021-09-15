@@ -25,11 +25,12 @@ function Backup-ValheimWorld {
     [CmdletBinding(SupportsShouldProcess)]
     param (
         [Parameter(position=0,ValueFromPipeline)]
-        [ValidateScript({Test-Path "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\worlds\$_.db"})]
-        [System.String[]]$World = (Get-ChildItem "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\worlds\*.db").BaseName
+        [System.String[]]$World = (Get-ChildItem "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\worlds\*.db" | Select-Object -ExpandProperty BaseName)
         ,
-        [Parameter(mandatory,position=1)]
+        [Parameter(position=1)]
         [System.IO.DirectoryInfo]$Destination = [System.IO.DirectoryInfo]"$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\Archive\Worlds"
+        ,
+        [System.Management.Automation.SwitchParameter]$PassThru
     )
 
     begin {
@@ -44,22 +45,29 @@ function Backup-ValheimWorld {
                 }
             }
         }
+        if (-not $World) {
+            $World = Get-ChildItem "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\worlds\*.db" | Select-Object -ExpandProperty BaseName
+        }
     }
     process {
-        if ($PSCmdlet.ShouldProcess($World,"Validation")) {
-            if (-not (Test-Path "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\Worlds\$World.db")) {
-                Write-Warning -Message ".db file missing for $World"
+        foreach ($w in $World) {
+            if ($PSCmdlet.ShouldProcess($w,"Validation")) {
+                if (-not (Test-Path "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\Worlds\$w.db")) {
+                    Write-Warning -Message ".db file missing for $w"
+                }
+                if (-not (Test-Path "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\Worlds\$w.fwl")) {
+                    Write-Warning -Message ".fwl file missing for $w"
+                }
             }
-            if (-not (Test-Path "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\Worlds\$World.fwl")) {
-                Write-Warning -Message ".fwl file missing for $World"
+            if ($PSCmdlet.ShouldProcess($w,"Archiving")) {
+                try {
+                    [System.IO.FileInfo[]]$Archive += Get-ChildItem "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\Worlds\$w*" -ErrorAction Stop |
+                    Compress-Archive -DestinationPath "$Destination\$w.$(Get-Date -uFormat %s).zip" -CompressionLevel Optimal -ErrorAction Stop -PassThru
+                }
+                catch {
+                    Write-Error $_
+                }
             }
-        }
-        try {
-            Get-ChildItem "$env:USERPROFILE\AppData\LocalLow\IronGate\Valheim\Worlds\$World*" -ErrorAction Stop |
-            Compress-Archive -DestinationPath "$Destination\$World.$(Get-Date -uFormat %s).zip" -CompressionLevel Optimal -ErrorAction Stop -PassThru -OutVariable Archive
-        }
-        catch {
-            Write-Error $_
         }
     }
     end {
